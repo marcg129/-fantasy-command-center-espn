@@ -1,0 +1,7 @@
+import test from "node:test"; import assert from "node:assert/strict";
+import { createState, recordPick } from "../src/draft-engine.js";
+import { exportBackup, importBackup, loadState, saveState, STORAGE_KEY } from "../src/storage.js";
+const memory=()=>{const map=new Map();return{getItem:key=>map.get(key)||null,setItem:(key,value)=>map.set(key,value)}};
+test("local persistence restores draft and shortlist",()=>{const storage=memory(),state=createState({players:[{id:"1",name:"One",team:"AAA",position:"RB",overallRank:1}],shortlist:["1"]});recordPick(state,"1");saveState(state,storage);const restored=loadState(storage);assert.equal(restored.picks.length,1);assert.deepEqual(restored.shortlist,["1"]);assert.ok(storage.getItem(STORAGE_KEY));});
+test("backup round-trip restores all canonical data",()=>{const state=createState({players:[{id:"1",name:"One",team:"AAA",position:"RB",overallRank:1}],shortlist:["1"]});recordPick(state,"1");const restored=importBackup(exportBackup(state));assert.deepEqual(restored.picks,state.picks);assert.deepEqual(restored.shortlist,state.shortlist);assert.equal(restored.league.leagueId,"1508075593");});
+test("malformed or duplicate-pick backups are rejected",()=>{const state=createState({players:[{id:"1",name:"One",team:"AAA",position:"RB",overallRank:1}],picks:[{playerId:"1"},{playerId:"1"}]});assert.throws(()=>importBackup(JSON.stringify(state)),/duplicate/);});
