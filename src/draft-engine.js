@@ -15,10 +15,15 @@ export const picksForPosition = (position, teams = 10, rounds = 16) => Array.fro
 
 export function createState(overrides = {}) {
   const league = { ...DEFAULT_LEAGUE, ...(overrides.league || {}) };
+  if (!Number.isInteger(league.teams) || league.teams < 4 || league.teams > 20) league.teams = DEFAULT_LEAGUE.teams;
+  if (!Number.isInteger(league.draftPosition) || league.draftPosition < 1 || league.draftPosition > league.teams) league.draftPosition = null;
+  const suppliedNames = Array.isArray(overrides.teamNames) ? overrides.teamNames : TEAM_NAMES;
+  const teamNames = Array.from({ length: league.teams }, (_, index) => suppliedNames[index] || `Team ${index + 1}`);
+  if (!overrides.teamNames && league.draftPosition) teamNames[league.draftPosition - 1] = league.userTeam;
   return {
     schemaVersion: 1,
     league,
-    teamNames: overrides.teamNames || TEAM_NAMES.map((name, index) => index + 1 === league.draftPosition ? league.userTeam : name),
+    teamNames,
     players: overrides.players || [], picks: overrides.picks || [], shortlist: overrides.shortlist || [],
     importedAt: overrides.importedAt || null
   };
@@ -27,6 +32,7 @@ export function createState(overrides = {}) {
 export function currentPick(state) { return state.picks.length + 1; }
 export function teamAtPick(state, pick = currentPick(state)) { return snakeSlot(pick, state.league.teams); }
 export function nextUserPick(state) {
+  if (!Number.isInteger(state.league.draftPosition)) return null;
   return picksForPosition(state.league.draftPosition, state.league.teams, state.league.rounds).find(pick => pick >= currentPick(state)) ?? null;
 }
 export function availablePlayers(state) {
@@ -40,6 +46,7 @@ export function rosters(state) {
   }, {});
 }
 export function recordPick(state, playerId) {
+  if (!Number.isInteger(state.league.draftPosition)) throw new Error("Select a valid draft position before recording picks");
   if (!state.players.some(player => player.id === playerId)) throw new Error("Player not found");
   if (state.picks.some(pick => pick.playerId === playerId)) throw new Error("That player has already been drafted");
   const pick = currentPick(state);
@@ -62,6 +69,19 @@ export function changeDraftPosition(state, position) {
   state.league.draftPosition = position;
   state.teamNames = state.teamNames.map((name, index) => index + 1 === old && name === state.league.userTeam ? `Team ${index + 1}` : name);
   state.teamNames[position - 1] = state.league.userTeam;
+  return state;
+}
+
+export function changeTeamCount(state, teams) {
+  if (!Number.isInteger(teams) || teams < 4 || teams > 20) throw new Error("Team count must be an integer from 4 through 20");
+  if (teams === state.league.teams) return state;
+  const oldPosition = state.league.draftPosition;
+  state.league.teams = teams;
+  state.teamNames = Array.from({ length: teams }, (_, index) => state.teamNames[index] || `Team ${index + 1}`);
+  if (oldPosition > teams) state.league.draftPosition = null;
+  state.picks = [];
+  const playerIds = new Set(state.players.map(player => player.id));
+  state.shortlist = state.shortlist.filter(id => playerIds.has(id));
   return state;
 }
 

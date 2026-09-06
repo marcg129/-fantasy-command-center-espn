@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.3] - 2026-09-06
+
+### Added
+
+- Added a configurable 4–20-team league size with common 10- and 12-team choices, dynamic draft-position options, and complete team-count-aware snake schedules.
+- Added an explicit structural-change confirmation after picks have been recorded.
+- Added 10- and 12-team snake, next-pick, migration, backup, preservation, cancellation, and structural-reset regressions.
+
+### Changed
+
+- Team-count changes preserve retained team names, rankings, valid shortlist entries, and other league settings. Confirmed post-pick changes clear only the canonical pick ledger and its derived rosters.
+- Legacy states without an explicit team count now migrate to 10 teams while retaining the stable storage key and v0.1.0 fallback.
+
+### Preserved
+
+- Retained v0.1.2 protected rankings loading, authentication, rankings data handling, and the v0.1.1 recommendation weights without changes.
+
 ## [0.1.2] - 2026-09-06
 
 ### Added

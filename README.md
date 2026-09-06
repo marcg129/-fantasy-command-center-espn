@@ -1,6 +1,6 @@
 # ESPN Draft Command Center
 
-A browser-based draft assistant for Men of Steele in the private ESPN league **Game of Inches**. Version **v0.1.2** can securely download a server-configured rankings board after beta authentication, while retaining the complete **Manual Mode** workflow. Record each ESPN pick manually and let the canonical local ledger drive availability, rosters, pick timing, and recommendations.
+A browser-based draft assistant for Men of Steele in the private ESPN league **Game of Inches**. Version **v0.1.3** supports configurable **4–20-team snake drafts** and can securely download a server-configured rankings board after beta authentication, while retaining the complete **Manual Mode** workflow. Record each ESPN pick manually and let the canonical local ledger drive availability, rosters, pick timing, and recommendations.
 
 > Draft: Sunday, September 6, 2026 at 8:00 PM Eastern · 10-team snake · Men of Steele picks 4th · 90 seconds per pick.
 
@@ -25,13 +25,15 @@ npm run check
 
 1. Open **League & data**. Enter the beta access code to authenticate and automatically load the protected board, or select **Enter Manual Mode** without making a rankings request.
 2. For the clearly labeled **Manual fallback**, download the CSV template, populate it from a current trusted provider, and use **Choose CSV**. No rankings are bundled.
-3. Confirm draft position **4 of 10**. If the commissioner changes it, update the position; rankings, ledger, and queue remain intact.
+3. Select the league's **Team count** (4–20, with convenient 10- and 12-team options), then confirm your draft position. Position choices and the complete snake schedule update immediately. If a smaller league makes the saved position invalid, a new valid position is required.
 4. In **Draft room**, click **Draft** beside the player selected in ESPN—regardless of which team is on the clock.
 5. Search/filter the remaining pool, review decision-support reasons, and maintain **My queue**.
 6. Use **Pick log** to undo the latest pick or safely correct an earlier selection.
 7. Export a JSON backup before the draft and periodically thereafter.
 
-The confirmed selections from position four are **4, 17, 24, 37, 44, 57, 64, 77, 84, 97, 104, 117, 124, 137, 144, and 157**.
+For a 12-team draft, round one runs slots **1 through 12**, and round two reverses from slot **12 back to 1** (overall picks 13 through 24). Position 4 therefore selects at **4, 21, 28, 45, ...**; position 12 selects at **12, 13, 36, 37, ...**.
+
+Changing team count before any picks preserves rankings, the queue, other league settings, and all still-present team names. Once picks exist, the app asks for explicit confirmation because a new team count changes snake ownership. Cancelling leaves state untouched; confirming clears only the pick ledger (and therefore derived rosters), preserves rankings, and retains queue entries that still identify imported players. Existing saves without a team count migrate as 10-team leagues under the stable `fcc-espn-state` key and v0.1.0 fallback.
 
 ## CSV import
 
@@ -67,7 +69,7 @@ The deterministic application score is **not projected fantasy points**. It star
 
 ADP is neutral within two picks and when missing. A player who has genuinely fallen more than two picks past ADP receives `min(8, 0.75 × excess fall)`; drafting more than two picks ahead receives a bounded `min(12, 0.75 × excess reach)` penalty. Open starter weights are RB/WR 5, TE 2.5, QB 1.5, and K/DST 0; open FLEX utility is RB/WR 2 and TE 1. A tier cliff adds 2.5 only when both adjacent same-position players have tiers. A second QB costs 12, exceeding a position maximum costs 100, and K/DST cost 120 in rounds 1–9, 30 in rounds 10–12, and zero automatically from round 13 onward. Candidates need a valid position and positive source rank; otherwise the UI can return **HOLD / insufficient data**.
 
-Browser saves now use the release-independent `fcc-espn-state` key. v0.1.1 reads the prior `fcc-espn-v0.1.0` key as a fallback, preserving imported rankings, picks, and queue data during upgrade; a full reset clears both keys.
+Browser saves use the release-independent `fcc-espn-state` key and read the prior `fcc-espn-v0.1.0` key as a fallback. v0.1.3 defaults states that predate the team-count field to 10 teams without discarding cached protected rankings, picks, or queue data; a full reset clears both keys.
 
 ## Architecture and privacy
 
@@ -78,7 +80,7 @@ Browser saves now use the release-independent `fcc-espn-state` key. v0.1.1 reads
 - `src/app.js` renders protected-loading and manual UI from engine state; it does not create a second draft-state source.
 - `api/session.js` authenticates same-origin beta requests and issues signed, expiring cookies; `api/rankings.js` validates the session, bounded gzip payload, and canonical CSV before responding.
 
-Never put `SWID`, `espn_s2`, raw private-league responses, access codes, signing secrets, protected rankings, or credentials in Git, browser code, a JSON backup, or a public host. v0.1.2 does not authenticate to ESPN and does not include ESPN synchronization.
+Never put `SWID`, `espn_s2`, raw private-league responses, access codes, signing secrets, protected rankings, or credentials in Git, browser code, a JSON backup, or a public host. v0.1.3 does not authenticate to ESPN and does not include ESPN synchronization.
 
 ## Preview-first Vercel deployment
 
@@ -98,7 +100,7 @@ Local `npm start` remains suitable for Manual Mode UI work, but its static serve
 - Data remains on the current browser/device unless exported; localStorage can be cleared by browser privacy settings.
 - Rankings quality and freshness depend entirely on the imported provider file.
 - Corrections replace the player on an existing pick; team slots remain dictated by the configured snake order.
-- Team names other than Men of Steele use numbered placeholders in this release.
+- Newly added team slots use numbered placeholders; existing names are retained when their slots remain in the configured league size.
 
 ## Next scope
 
