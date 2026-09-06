@@ -8,7 +8,7 @@
 <body>
   <header class="topbar">
     <div><span class="eyebrow">GAME OF INCHES · ESPN</span><h1>Draft Command Center</h1></div>
-    <div class="mode"><span></span> Manual Mode <small>v0.1.1</small></div>
+    <div class="mode"><span></span> Protected + Manual <small>v0.1.2</small></div>
   </header>
   <main>
     <section class="hero panel">
@@ -40,7 +40,8 @@
     <section id="settings" class="tab-view">
       <div class="settings-grid">
         <section class="panel"><span class="eyebrow">CONFIRMED SETUP</span><h2>League settings</h2><dl class="facts"><div><dt>League</dt><dd>Game of Inches</dd></div><div><dt>Format</dt><dd>Full PPR · Redraft</dd></div><div><dt>Draft</dt><dd>10 teams · Snake · 16 rounds</dd></div><div><dt>Lineup</dt><dd>QB · 2 RB · 2 WR · TE · FLEX · D/ST · K · 7 BN</dd></div></dl><label>Men of Steele draft position<select id="draft-position"></select></label><p id="scheduled-picks" class="callout"></p><button id="save-position" class="primary">Save position</button></section>
-        <section class="panel"><span class="eyebrow">PLAYER DATA</span><h2>Import rankings CSV</h2><p class="subtle">Required: name, team, position and overall rank. Missing optional values display as unavailable.</p><div class="button-row"><a href="data/player-rankings-template.csv" download class="secondary button">Download template</a><label class="primary button">Choose CSV<input id="csv-file" type="file" accept=".csv,text/csv" hidden></label></div><div id="import-report" aria-live="polite"></div></section>
+        <section class="panel rankings-access"><span class="eyebrow">PROTECTED RANKINGS</span><h2>Load the beta board</h2><p id="rankings-status" class="status" aria-live="polite">Enter your beta access code to load rankings automatically.</p><p id="rankings-cache" class="subtle"></p><form id="rankings-form"><label>Beta access code<input id="access-code" type="password" autocomplete="current-password" required></label><div class="button-row"><button id="load-rankings" class="primary" type="submit">Unlock & load</button><button id="manual-mode" class="secondary" type="button">Enter Manual Mode</button></div></form></section>
+        <section id="manual-fallback" class="panel"><span class="eyebrow">MANUAL FALLBACK</span><h2>Choose rankings CSV</h2><p class="subtle">Manual CSV import remains supported. Required: name, team, position and overall rank. Missing optional values display as unavailable.</p><div class="button-row"><a href="data/player-rankings-template.csv" download class="secondary button">Download template</a><label class="primary button">Choose CSV<input id="csv-file" type="file" accept=".csv,text/csv" hidden></label></div><div id="import-report" aria-live="polite"></div></section>
         <section class="panel"><span class="eyebrow">RECOVERY</span><h2>Backup & reset</h2><p class="subtle">JSON backups include settings, rankings, ledger and queue. They contain no ESPN credentials.</p><div class="button-row"><button id="export-backup" class="secondary">Export JSON</button><label class="secondary button">Import JSON<input id="backup-file" type="file" accept=".json,application/json" hidden></label><button id="reset" class="danger">Full reset</button></div></section>
       </div>
     </section>

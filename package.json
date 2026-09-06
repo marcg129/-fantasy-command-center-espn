@@ -1,12 +1,13 @@
 {
   "name": "fantasy-command-center-espn",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node scripts/serve.js",
     "test": "node --test",
-    "check": "node --check src/app.js && node --check src/draft-engine.js"
+    "check": "node --check src/app.js && node --check src/draft-engine.js && node --check api/session.js && node --check api/rankings.js",
+    "encode-rankings": "node scripts/encode-rankings.js"
   },
   "engines": { "node": ">=20" }
 }

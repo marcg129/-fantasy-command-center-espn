@@ -1,6 +1,7 @@
 import { availablePlayers, changeDraftPosition, correctPick, createState, currentPick, nextUserPick, picksForPosition, recommendations, recordPick, rosterCounts, roundForPick, snakeSlot, starterNeeds, undoPick } from "./draft-engine.js";
 import { parsePlayerCsv } from "./csv.js";
 import { clearState, exportBackup, importBackup, loadState, saveState } from "./storage.js";
+import { hasCachedRankings, loadProtectedRankings } from "./protected-rankings.js";
 
 let state = loadState();
 const $ = selector => document.querySelector(selector);
@@ -60,6 +61,9 @@ function renderLedger() {
 function renderSettings() {
   $("#draft-position").innerHTML = Array.from({length:10},(_,index) => `<option value="${index+1}" ${index+1===state.league.draftPosition?"selected":""}>${index+1} of 10</option>`).join("");
   $("#scheduled-picks").innerHTML = `<strong>Scheduled selections</strong><br>${picksForPosition(state.league.draftPosition).join(", ")}`;
+  const cached = hasCachedRankings(state);
+  $("#rankings-cache").textContent = cached ? `${state.players.length} cached players · Imported ${state.importedAt ? new Date(state.importedAt).toLocaleString() : "time unavailable"}` : "No rankings are cached on this device.";
+  if (cached) { $("#rankings-status").textContent = "Ready — using cached rankings. No protected request was made."; $("#rankings-form").hidden = true; }
 }
 
 function escapeHtml(value) { const div=document.createElement("div"); div.textContent=value; return div.innerHTML; }
@@ -77,6 +81,13 @@ $("#search").addEventListener("input", renderPlayers); $("#position-filter").add
 $("#undo").addEventListener("click", () => { const undone=undoPick(state); if (undone) commit("Latest pick undone"); });
 $("#save-position").addEventListener("click", () => { changeDraftPosition(state, Number($("#draft-position").value)); commit("Draft position updated; saved data preserved"); });
 $("#draft-position").addEventListener("change", event => { $("#scheduled-picks").innerHTML=`<strong>Scheduled selections</strong><br>${picksForPosition(Number(event.target.value)).join(", ")}`; });
+$("#manual-mode").addEventListener("click", () => { $("#manual-fallback").scrollIntoView({ behavior: "smooth" }); $("#rankings-status").textContent = "Manual Mode selected — no protected rankings request was made."; });
+$("#rankings-form").addEventListener("submit", async event => {
+  event.preventDefault(); const button=$("#load-rankings"), status=$("#rankings-status"); button.disabled=true; status.textContent="Loading — authenticating and validating rankings…";
+  try { const result=await loadProtectedRankings({code:$("#access-code").value,state,persist:saveState}); $("#access-code").value=""; status.textContent=`Ready — ${result.count} rankings loaded and saved on this device.`; render(); }
+  catch(error) { status.textContent=`Fallback available — ${error.message}`; }
+  finally { button.disabled=false; }
+});
 $("#csv-file").addEventListener("change", async event => { const report=parsePlayerCsv(await event.target.files[0].text()); $("#import-report").innerHTML=[...report.errors.map(x=>`<p class="error">${escapeHtml(x)}</p>`),...report.warnings.map(x=>`<p class="warning">${escapeHtml(x)}</p>`)].join(""); if (report.players.length && !report.errors.length) { state.players=report.players; state.importedAt=new Date().toISOString(); state.picks=[]; state.shortlist=[]; commit(`Imported ${report.players.length} players`); } event.target.value=""; });
 $("#export-backup").addEventListener("click", () => download("men-of-steele-draft-backup.json", exportBackup(state), "application/json"));
 $("#backup-file").addEventListener("change", async event => { try { state=importBackup(await event.target.files[0].text()); commit("Backup restored"); } catch(error) { toast(error.message); } event.target.value=""; });

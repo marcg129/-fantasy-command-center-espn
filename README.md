@@ -1,6 +1,6 @@
 # ESPN Draft Command Center
 
-A static-host-compatible, browser-based **Manual Mode** draft assistant for Men of Steele in the private ESPN league **Game of Inches**. Version **v0.1.1** is intentionally credential-free: import current rankings, record each ESPN pick manually, and let the canonical local ledger drive availability, rosters, pick timing, and recommendations.
+A browser-based draft assistant for Men of Steele in the private ESPN league **Game of Inches**. Version **v0.1.2** can securely download a server-configured rankings board after beta authentication, while retaining the complete **Manual Mode** workflow. Record each ESPN pick manually and let the canonical local ledger drive availability, rosters, pick timing, and recommendations.
 
 > Draft: Sunday, September 6, 2026 at 8:00 PM Eastern · 10-team snake · Men of Steele picks 4th · 90 seconds per pick.
 
@@ -23,8 +23,8 @@ npm run check
 
 ## Draft workflow
 
-1. Open **League & data** and download the CSV template.
-2. Populate it from a current, trusted rankings provider and import it. No rankings are bundled.
+1. Open **League & data**. Enter the beta access code to authenticate and automatically load the protected board, or select **Enter Manual Mode** without making a rankings request.
+2. For the clearly labeled **Manual fallback**, download the CSV template, populate it from a current trusted provider, and use **Choose CSV**. No rankings are bundled.
 3. Confirm draft position **4 of 10**. If the commissioner changes it, update the position; rankings, ledger, and queue remain intact.
 4. In **Draft room**, click **Draft** beside the player selected in ESPN—regardless of which team is on the clock.
 5. Search/filter the remaining pool, review decision-support reasons, and maintain **My queue**.
@@ -43,7 +43,23 @@ player_name,team,position,overall_rank,positional_rank,tier,adp,projected_points
 
 `player_name`, `team`, `position`, and `overall_rank` are required. Positions are `QB`, `RB`, `WR`, `TE`, `DST` (or `D/ST`), and `K`. All remaining fields are optional and shown as unavailable when omitted. Provider IDs are preserved and preferred as stable player IDs.
 
-The importer reports malformed column counts, missing values, invalid positions/numbers, duplicate player identities, and ambiguous repeated names. Imports with errors do not replace the current board. A successful replacement deliberately clears the old ledger and queue because their player IDs may no longer match; export a backup first if needed.
+The importer reports malformed column counts, missing values, invalid positions/numbers, duplicate player identities, and ambiguous repeated names. Protected and manual rankings both pass through this same canonical parser. Imports with errors do not replace the current board. A successful manual replacement deliberately clears the old ledger and queue because their player IDs may no longer match; export a backup first if needed.
+
+## Protected rankings setup
+
+Keep all three values in Vercel server-side environment variables; never place them in browser code or commit them. `.env.example` intentionally contains empty placeholders only.
+
+- `BETA_ACCESS_CODE`: the code shared privately with beta testers.
+- `SESSION_SECRET`: a long, random signing secret used for eight-hour HttpOnly session cookies.
+- `RANKINGS_GZIP_BASE64`: the output of the local encoder below.
+
+Prepare a canonical CSV without modifying it:
+
+```bash
+npm run encode-rankings -- path/to/rankings.csv
+```
+
+The command validates through `parsePlayerCsv`, writes only `.runtime/rankings-gzip-base64.txt` with mode `0600`, and prints metadata rather than the payload. Copy that file's value into the Vercel environment setting through a secure administrative channel. The source CSV, `.runtime/`, local `.env*` files, and encoded output must remain untracked.
 
 ## Recommendation model
 
@@ -59,24 +75,26 @@ Browser saves now use the release-independent `fcc-espn-state` key. v0.1.1 reads
 - `src/csv.js` validates imported rankings without calling a third party.
 - `src/storage.js` owns versioned browser persistence and credential-free backup/restore.
 - `src/platform-adapter.js` defines the seam for a future server-side ESPN adapter.
-- `src/app.js` renders the manual UI from engine state; it does not create a second draft-state source.
+- `src/app.js` renders protected-loading and manual UI from engine state; it does not create a second draft-state source.
+- `api/session.js` authenticates same-origin beta requests and issues signed, expiring cookies; `api/rankings.js` validates the session, bounded gzip payload, and canonical CSV before responding.
 
-Never put `SWID`, `espn_s2`, raw private-league responses, or credentials in this app, a CSV, a JSON backup, Git, browser code, or GitHub Pages. v0.1.1 neither authenticates to ESPN nor claims live synchronization.
+Never put `SWID`, `espn_s2`, raw private-league responses, access codes, signing secrets, protected rankings, or credentials in Git, browser code, a JSON backup, or a public host. v0.1.2 does not authenticate to ESPN and does not include ESPN synchronization.
 
-## GitHub Pages deployment
+## Preview-first Vercel deployment
 
-This release uses relative URLs and needs no build step.
+The protected endpoints require Vercel serverless functions. Validate in a Preview deployment before considering any Production change:
 
-1. Push the branch to GitHub and open repository **Settings → Pages**.
-2. Under **Build and deployment**, choose **Deploy from a branch**.
-3. Select the release/default branch and the **`/ (root)`** folder, then click **Save**.
-4. Open the published URL shown by Pages and test CSV import plus JSON export/import in that browser.
+1. Create the three variables above for the **Preview** environment only.
+2. Generate a Preview deployment from the pull request branch. Do not promote it and do not alter Production variables.
+3. Open the exact HTTPS Preview URL and test incorrect and correct codes, automatic loading, refresh/cached behavior, and Manual fallback.
+4. Test on a phone at the Preview URL, including cookie behavior, scrolling, loading/fallback status, a manual pick, and persistence after refresh.
+5. Review Preview logs only for status/operational metadata; the handlers intentionally do not log request bodies, codes, cookies, environment values, or rankings.
 
-For a stricter production workflow, deploy the exact tagged `v0.1.1` contents through a Pages Actions workflow. GitHub Pages is public hosting even when draft data remains browser-local; do not include private exports in the repository.
+Local `npm start` remains suitable for Manual Mode UI work, but its static server does not emulate Vercel functions. Manual CSV import remains fully supported.
 
 ## Known limitations
 
-- Manual pick entry is required; no ESPN login, private-league fetch, or live draft sync is included.
+- Manual pick entry is required; no ESPN login, private-league fetch, or ESPN synchronization is included.
 - Data remains on the current browser/device unless exported; localStorage can be cleared by browser privacy settings.
 - Rankings quality and freshness depend entirely on the imported provider file.
 - Corrections replace the player on an existing pick; team slots remain dictated by the configured snake order.
