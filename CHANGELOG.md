@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.1] - 2026-09-06
+
+### Fixed
+
+- Made relative source rank the primary recommendation signal while retaining useful candidates through round 16.
+- Corrected ADP direction with bounded fall bonuses, bounded reach penalties, and neutral missing ADP.
+- Rebalanced starter, FLEX, and tier-cliff weights so positional needs do not overwhelm elite value.
+- Applied K/DST penalties consistently in rounds 1–9 and 10–12, with the penalty ending in round 13.
+- Migrated future saves to a version-independent key while retaining v0.1.0 reads and clearing both keys on reset.
+
+### Tested
+
+- Added early-order, ADP, tier, K/DST, rounds 8/12/16, HOLD, migration, and reset regressions.
+
 ## [0.1.0] - 2026-09-06
 
 ### Added

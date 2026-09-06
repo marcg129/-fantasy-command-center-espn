@@ -1,6 +1,6 @@
 import { availablePlayers, changeDraftPosition, correctPick, createState, currentPick, nextUserPick, picksForPosition, recommendations, recordPick, rosterCounts, roundForPick, snakeSlot, starterNeeds, undoPick } from "./draft-engine.js";
 import { parsePlayerCsv } from "./csv.js";
-import { exportBackup, importBackup, loadState, saveState, STORAGE_KEY } from "./storage.js";
+import { clearState, exportBackup, importBackup, loadState, saveState } from "./storage.js";
 
 let state = loadState();
 const $ = selector => document.querySelector(selector);
@@ -81,7 +81,7 @@ $("#csv-file").addEventListener("change", async event => { const report=parsePla
 $("#export-backup").addEventListener("click", () => download("men-of-steele-draft-backup.json", exportBackup(state), "application/json"));
 $("#backup-file").addEventListener("change", async event => { try { state=importBackup(await event.target.files[0].text()); commit("Backup restored"); } catch(error) { toast(error.message); } event.target.value=""; });
 $("#reset").addEventListener("click", () => $("#confirm-dialog").showModal()); $("#cancel-reset").addEventListener("click",()=>$("#confirm-dialog").close());
-$("#confirm-reset").addEventListener("click",()=>{ localStorage.removeItem(STORAGE_KEY); state=createState(); $("#confirm-dialog").close(); render(); toast("Application reset"); });
+$("#confirm-reset").addEventListener("click",()=>{ clearState(); state=createState(); $("#confirm-dialog").close(); render(); toast("Application reset"); });
 let correctionPick=null;
 function openCorrection(pick) { correctionPick=pick; $("#correct-number").textContent=`#${pick}`; const current=state.picks.find(item=>item.pick===pick)?.playerId; $("#replacement-player").innerHTML=state.players.filter(player=>!state.picks.some(item=>item.playerId===player.id)||player.id===current).sort((a,b)=>a.overallRank-b.overallRank).map(player=>`<option value="${player.id}" ${player.id===current?"selected":""}>${escapeHtml(player.name)} · ${player.position}</option>`).join(""); $("#correct-dialog").showModal(); }
 $("#cancel-correct").addEventListener("click",()=>$("#correct-dialog").close()); $("#confirm-correct").addEventListener("click",()=>{ try { correctPick(state,correctionPick,$("#replacement-player").value); $("#correct-dialog").close(); commit("Earlier pick corrected safely"); } catch(error) { toast(error.message); } });
