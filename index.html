@@ -6,9 +6,12 @@
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
+  <div id="access-gate" class="access-gate" role="dialog" aria-modal="true" aria-labelledby="access-title">
+    <form id="access-form" class="access-card"><span class="eyebrow">PRIVATE BETA</span><h2 id="access-title">Enter your access code</h2><p>Unlock the protected default rankings for this draft session.</p><label for="access-code">Access code</label><input id="access-code" name="code" type="password" required autocomplete="off" autocapitalize="none" spellcheck="false"><p id="access-error" class="access-error" aria-live="polite"></p><button class="primary" type="submit">Continue</button><button id="manual-mode" class="secondary" type="button">Use manual CSV instead</button></form>
+  </div>
   <header class="topbar">
     <div><span class="eyebrow">GAME OF INCHES · ESPN</span><h1>Draft Command Center</h1></div>
-    <div class="mode"><span></span> Manual Mode <small>v0.1.0</small></div>
+    <div class="mode"><span></span> Manual Mode <small>v0.1.2</small></div>
   </header>
   <main>
     <section class="hero panel">
@@ -40,7 +43,7 @@
     <section id="settings" class="tab-view">
       <div class="settings-grid">
         <section class="panel"><span class="eyebrow">CONFIRMED SETUP</span><h2>League settings</h2><dl class="facts"><div><dt>League</dt><dd>Game of Inches</dd></div><div><dt>Format</dt><dd>Full PPR · Redraft</dd></div><div><dt>Draft</dt><dd>10 teams · Snake · 16 rounds</dd></div><div><dt>Lineup</dt><dd>QB · 2 RB · 2 WR · TE · FLEX · D/ST · K · 7 BN</dd></div></dl><label>Men of Steele draft position<select id="draft-position"></select></label><p id="scheduled-picks" class="callout"></p><button id="save-position" class="primary">Save position</button></section>
-        <section class="panel"><span class="eyebrow">PLAYER DATA</span><h2>Import rankings CSV</h2><p class="subtle">Required: name, team, position and overall rank. Missing optional values display as unavailable.</p><div class="button-row"><a href="data/player-rankings-template.csv" download class="secondary button">Download template</a><label class="primary button">Choose CSV<input id="csv-file" type="file" accept=".csv,text/csv" hidden></label></div><div id="import-report" aria-live="polite"></div></section>
+        <section class="panel"><span class="eyebrow">PLAYER DATA</span><h2>Protected rankings</h2><div id="rankings-status" class="callout" aria-live="polite"><strong>Checking rankings…</strong></div><h3>Manual fallback</h3><p class="subtle">Choose an app-compatible CSV if protected loading is unavailable. Required: name, team, position and overall rank.</p><div class="button-row"><a href="data/player-rankings-template.csv" download class="secondary button">Download template</a><label class="primary button">Choose CSV<input id="csv-file" type="file" accept=".csv,text/csv" hidden></label></div><div id="import-report" aria-live="polite"></div></section>
         <section class="panel"><span class="eyebrow">RECOVERY</span><h2>Backup & reset</h2><p class="subtle">JSON backups include settings, rankings, ledger and queue. They contain no ESPN credentials.</p><div class="button-row"><button id="export-backup" class="secondary">Export JSON</button><label class="secondary button">Import JSON<input id="backup-file" type="file" accept=".json,application/json" hidden></label><button id="reset" class="danger">Full reset</button></div></section>
       </div>
     </section>

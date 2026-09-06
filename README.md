@@ -1,6 +1,6 @@
 # ESPN Draft Command Center
 
-A static-host-compatible, browser-based **Manual Mode** draft assistant for Men of Steele in the private ESPN league **Game of Inches**. Version **v0.1.0** is intentionally credential-free: import current rankings, record each ESPN pick manually, and let the canonical local ledger drive availability, rosters, pick timing, and recommendations.
+A static frontend with protected automatic rankings for Men of Steele in the private ESPN league **Game of Inches**. Version **v0.1.2** uses Vercel Functions for beta access and rankings delivery while preserving credential-free Manual Mode and CSV import. It does not authenticate to ESPN or synchronize draft activity.
 
 > Draft: Sunday, September 6, 2026 at 8:00 PM Eastern · 10-team snake · Men of Steele picks 4th · 90 seconds per pick.
 
@@ -20,6 +20,24 @@ Run checks:
 npm test
 npm run check
 ```
+
+## Protected rankings on Vercel
+
+Configure these three server-side variables in Vercel project settings for Preview and Production as appropriate. Do not use client-exposed prefixes and do not put values in tracked files:
+
+- `BETA_ACCESS_CODE` — the private beta code.
+- `SESSION_SECRET` — a strong random signing value of at least 32 characters.
+- `RANKINGS_GZIP_BASE64` — the encoded output produced by the local tool below.
+
+Create the rankings value without changing the input CSV or printing the payload:
+
+```bash
+npm run encode-rankings -- path/to/rankings.csv
+```
+
+The tool validates with the same canonical CSV parser used by the browser, then writes `.runtime/rankings-gzip-base64.txt` with owner-only permissions. That directory, local environment files, and the generated filename are ignored by Git. Copy the file contents into the Vercel environment-variable UI; never commit it. Use `vercel` to create a Preview deployment first, verify access and fallback behavior on a phone-sized viewport, and promote separately only after review. This repository does not deploy or modify Production automatically.
+
+On a new browser with no player data, a successful beta session retrieves the protected default CSV automatically. Existing cached or manually imported rankings are used immediately and are not overwritten on refresh. If retrieval or validation fails, the existing rankings, ledger, and queue remain unchanged and **League & data → Manual fallback → Choose CSV** remains available.
 
 ## Draft workflow
 
@@ -47,7 +65,11 @@ The importer reports malformed column counts, missing values, invalid positions/
 
 ## Recommendation model
 
-The deterministic application score is **not projected fantasy points**. It combines portable draft concepts: imported overall rank and ADP value, starter/bench construction, positional needs, scarcity and tier cliffs, distance to the user's next pick, and practical roster utility. It treats RB/WR/TE as FLEX-eligible, discounts excess QBs in this one-QB league, respects position maximums, and suppresses early kicker and D/ST suggestions unless roster circumstances justify them. Missing data stays missing; the UI can return **HOLD / insufficient data** and never invents survival probabilities.
+The deterministic application score is **not projected fantasy points**. It starts at 20, then adds a source-rank component from 70 down to 10 based on distance from the best currently available imported rank (`70 - min(60, 0.75 × rank distance)`). This keeps source rank primary without making a plausible late-round pool score below zero. Projected points add at most 10.
+
+ADP is neutral within two picks and when missing. A player who has genuinely fallen more than two picks past ADP receives `min(8, 0.75 × excess fall)`; drafting more than two picks ahead receives a bounded `min(12, 0.75 × excess reach)` penalty. Open starter weights are RB/WR 5, TE 2.5, QB 1.5, and K/DST 0; open FLEX utility is RB/WR 2 and TE 1. A tier cliff adds 2.5 only when both adjacent same-position players have tiers. A second QB costs 12, exceeding a position maximum costs 100, and K/DST cost 120 in rounds 1–9, 30 in rounds 10–12, and zero automatically from round 13 onward. Candidates need a valid position and positive source rank; otherwise the UI can return **HOLD / insufficient data**.
+
+Browser saves use the release-independent `fcc-espn-state` key. v0.1.2 reads the prior `fcc-espn-v0.1.0` key as a fallback, preserving imported rankings, picks, and queue data during upgrade; a full reset clears both keys.
 
 ## Architecture and privacy
 
@@ -56,8 +78,10 @@ The deterministic application score is **not projected fantasy points**. It comb
 - `src/storage.js` owns versioned browser persistence and credential-free backup/restore.
 - `src/platform-adapter.js` defines the seam for a future server-side ESPN adapter.
 - `src/app.js` renders the manual UI from engine state; it does not create a second draft-state source.
+- `api/session.js` validates same-origin beta access requests and issues signed, expiring, HttpOnly session cookies.
+- `api/rankings.js` authenticates requests and decodes the server-only compressed CSV without caching it.
 
-Never put `SWID`, `espn_s2`, raw private-league responses, or credentials in this app, a CSV, a JSON backup, Git, browser code, or GitHub Pages. v0.1.0 neither authenticates to ESPN nor claims live synchronization.
+Never put `SWID`, `espn_s2`, raw private-league responses, access codes, signing secrets, encoded rankings, or credentials in this app, a JSON backup, Git, browser code, or logs. v0.1.2 neither authenticates to ESPN nor claims live synchronization.
 
 ## GitHub Pages deployment
 
@@ -68,7 +92,7 @@ This release uses relative URLs and needs no build step.
 3. Select the release/default branch and the **`/ (root)`** folder, then click **Save**.
 4. Open the published URL shown by Pages and test CSV import plus JSON export/import in that browser.
 
-For a stricter production workflow, deploy the exact tagged `v0.1.0` contents through a Pages Actions workflow. GitHub Pages is public hosting even when draft data remains browser-local; do not include private exports in the repository.
+Protected automatic rankings require Vercel Functions and are not available on a GitHub Pages-only deployment. The static interface and manual CSV fallback remain usable when hosted without the functions.
 
 ## Known limitations
 

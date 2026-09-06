@@ -83,30 +83,39 @@ export function starterNeeds(state) {
 const numeric = value => Number.isFinite(value) ? value : null;
 export function recommendations(state, limit = 8) {
   if (!state.players.length) return { status: "HOLD", message: "Insufficient data — import current rankings to calculate recommendations.", players: [] };
-  const pick = currentPick(state), next = nextUserPick(state), counts = rosterCounts(state), needs = starterNeeds(state);
-  const scored = availablePlayers(state).filter(player => POSITIONS.includes(player.position)).map(player => {
-    let score = 100;
+  const pick = currentPick(state), round = roundForPick(pick, state.league.teams), counts = rosterCounts(state), needs = starterNeeds(state);
+  const eligible = availablePlayers(state).filter(player => POSITIONS.includes(player.position) && numeric(player.overallRank) > 0);
+  const bestAvailableRank = Math.min(...eligible.map(player => player.overallRank));
+  const scored = eligible.map(player => {
+    let score = 20;
     const rank = numeric(player.overallRank), adp = numeric(player.adp), projected = numeric(player.projectedPoints);
-    if (rank !== null) score -= Math.min(rank, 250) * .28;
-    if (adp !== null) score += Math.max(-18, Math.min(18, adp - pick)) * .7;
+    // Rank is the dominant imported signal. Measuring it from the best player who is
+    // actually available avoids making every late-round option unselectable.
+    score += 70 - Math.min(60, (rank - bestAvailableRank) * .75);
+    const adpDifference = adp === null ? 0 : pick - adp;
+    if (adpDifference > 2) score += Math.min(8, (adpDifference - 2) * .75);
+    else if (adpDifference < -2) score -= Math.min(12, (-adpDifference - 2) * .75);
     if (projected !== null) score += Math.min(projected, 400) * .025;
     const baseNeed = needs[player.position] || 0;
-    if (baseNeed) score += 11;
-    if (["RB", "WR", "TE"].includes(player.position) && needs.FLEX) score += 4;
+    const needWeight = { RB: 5, WR: 5, TE: 2.5, QB: 1.5, K: 0, DST: 0 }[player.position];
+    if (baseNeed) score += needWeight;
+    if (needs.FLEX) score += { RB: 2, WR: 2, TE: 1 }[player.position] || 0;
     if (counts[player.position] >= state.league.maximums[player.position]) score -= 100;
     if (player.position === "QB" && counts.QB >= 1) score -= 12;
-    if (["K", "DST"].includes(player.position) && roundForPick(pick, state.league.teams) < 13 && !baseNeed) score -= 35;
-    const samePosition = availablePlayers(state).filter(other => other.position === player.position && numeric(other.overallRank) !== null).sort((a,b) => a.overallRank-b.overallRank);
+    if (["K", "DST"].includes(player.position)) score -= round <= 9 ? 120 : round <= 12 ? 30 : 0;
+    const samePosition = eligible.filter(other => other.position === player.position).sort((a,b) => a.overallRank-b.overallRank);
     const index = samePosition.findIndex(other => other.id === player.id);
-    if (index >= 0 && samePosition[index + 1]?.tier > player.tier) score += 7;
+    const nextTier = numeric(samePosition[index + 1]?.tier), tier = numeric(player.tier);
+    const hasTierDrop = index >= 0 && tier !== null && nextTier !== null && nextTier > tier;
+    if (hasTierDrop) score += 2.5;
     const reasons = [];
+    if (adpDifference > 2) reasons.push("fallen past market ADP");
+    if (hasTierDrop) reasons.push("tier drop follows");
     if (baseNeed) reasons.push(`fills ${player.position} starter need`);
     else if (["RB", "WR", "TE"].includes(player.position) && needs.FLEX) reasons.push("helps fill FLEX");
-    if (rank !== null && rank <= pick + 8) reasons.push("source-rank value");
-    if (adp !== null && adp < (next || pick)) reasons.push("may not reach your next pick");
-    if (index >= 0 && samePosition[index + 1]?.tier > player.tier) reasons.push("tier drop follows");
+    if (rank <= Math.max(pick + 8, bestAvailableRank + 8)) reasons.push("source-rank value");
     if (!reasons.length) reasons.push("adds practical roster depth");
-    return { ...player, recommendationScore: Math.round(score * 10) / 10, reasons: reasons.slice(0, 2) };
+    return { ...player, recommendationScore: Math.round(score * 10) / 10, reasons: reasons.slice(0, 3) };
   }).filter(player => player.recommendationScore > 0).sort((a,b) => b.recommendationScore-a.recommendationScore).slice(0, limit);
   return { status: scored.length ? "READY" : "HOLD", message: scored.length ? "Scores combine roster utility, scarcity, imported value, tiers and pick spacing." : "Insufficient eligible data for a recommendation.", players: scored };
 }

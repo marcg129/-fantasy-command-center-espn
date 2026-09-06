@@ -14,5 +14,5 @@ credentials*/
 *.credentials.json
 *.secret.json
 .runtime/
+rankings-gzip-base64.txt
 tmp/
-
