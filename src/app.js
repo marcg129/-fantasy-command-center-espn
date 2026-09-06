@@ -1,4 +1,4 @@
-import { availablePlayers, changeDraftPosition, correctPick, createState, currentPick, nextUserPick, picksForPosition, recommendations, recordPick, rosterCounts, roundForPick, snakeSlot, starterNeeds, undoPick } from "./draft-engine.js";
+import { availablePlayers, changeDraftPosition, changeTeamCount, correctPick, createState, currentPick, nextUserPick, picksForPosition, recommendations, recordPick, rosterCounts, roundForPick, snakeSlot, starterNeeds, undoPick } from "./draft-engine.js";
 import { parsePlayerCsv } from "./csv.js";
 import { clearState, exportBackup, importBackup, loadState, saveState } from "./storage.js";
 import { hasCachedRankings, loadProtectedRankings } from "./protected-rankings.js";
@@ -20,10 +20,10 @@ function showTab(id) {
 function render() {
   const pick = currentPick(state), round = roundForPick(pick, state.league.teams), within = ((pick - 1) % state.league.teams) + 1;
   $("#current-pick").textContent = pick > state.league.teams * state.league.rounds ? "Complete" : `${round}.${String(within).padStart(2,"0")}`;
-  $("#clock-team").textContent = pick > 160 ? "Draft complete" : `${teamName(snakeSlot(pick, state.league.teams))} on the clock`;
+  $("#clock-team").textContent = pick > state.league.teams * state.league.rounds ? "Draft complete" : `${teamName(snakeSlot(pick, state.league.teams))} on the clock`;
   const next = nextUserPick(state);
-  $("#next-pick").textContent = next ? `${roundForPick(next, 10)}.${String(((next - 1) % 10) + 1).padStart(2,"0")}` : "Complete";
-  $("#pick-spacing").textContent = next ? `${next - pick} pick${next - pick === 1 ? "" : "s"} away · #${next} overall` : "All selections complete";
+  $("#next-pick").textContent = next ? `${roundForPick(next, state.league.teams)}.${String(((next - 1) % state.league.teams) + 1).padStart(2,"0")}` : state.league.draftPosition ? "Complete" : "Select position";
+  $("#pick-spacing").textContent = next ? `${next - pick} pick${next - pick === 1 ? "" : "s"} away · #${next} overall` : state.league.draftPosition ? "All selections complete" : "Choose a valid draft position";
   $("#queue-count").textContent = state.shortlist.length;
   renderPlayers(); renderRecommendations(); renderRoster(); renderQueue(); renderLedger(); renderSettings();
 }
@@ -59,8 +59,12 @@ function renderLedger() {
 }
 
 function renderSettings() {
-  $("#draft-position").innerHTML = Array.from({length:10},(_,index) => `<option value="${index+1}" ${index+1===state.league.draftPosition?"selected":""}>${index+1} of 10</option>`).join("");
-  $("#scheduled-picks").innerHTML = `<strong>Scheduled selections</strong><br>${picksForPosition(state.league.draftPosition).join(", ")}`;
+  $("#team-count").value = state.league.teams;
+  $("#league-draft-summary").textContent = `${state.league.teams} teams · Snake · ${state.league.rounds} rounds`;
+  $("#hero-draft-summary").textContent = `${state.league.teams}-team snake · ${state.league.secondsPerPick} sec/pick`;
+  $("#hero-position").textContent = state.league.draftPosition ? `Draft from the ${state.league.draftPosition} spot.` : "Choose your draft position.";
+  $("#draft-position").innerHTML = `${state.league.draftPosition ? "" : '<option value="" selected disabled>Select a position</option>'}${Array.from({length:state.league.teams},(_,index) => `<option value="${index+1}" ${index+1===state.league.draftPosition?"selected":""}>${index+1} of ${state.league.teams}</option>`).join("")}`;
+  $("#scheduled-picks").innerHTML = state.league.draftPosition ? `<strong>Scheduled selections</strong><br>${picksForPosition(state.league.draftPosition, state.league.teams, state.league.rounds).join(", ")}` : "<strong>New draft position required</strong><br>Select a valid position before drafting.";
   const cached = hasCachedRankings(state);
   $("#rankings-cache").textContent = cached ? `${state.players.length} cached players · Imported ${state.importedAt ? new Date(state.importedAt).toLocaleString() : "time unavailable"}` : "No rankings are cached on this device.";
   if (cached) { $("#rankings-status").textContent = "Ready — using cached rankings. No protected request was made."; $("#rankings-form").hidden = true; }
@@ -79,8 +83,23 @@ document.addEventListener("click", event => {
 });
 $("#search").addEventListener("input", renderPlayers); $("#position-filter").addEventListener("change", renderPlayers);
 $("#undo").addEventListener("click", () => { const undone=undoPick(state); if (undone) commit("Latest pick undone"); });
-$("#save-position").addEventListener("click", () => { changeDraftPosition(state, Number($("#draft-position").value)); commit("Draft position updated; saved data preserved"); });
-$("#draft-position").addEventListener("change", event => { $("#scheduled-picks").innerHTML=`<strong>Scheduled selections</strong><br>${picksForPosition(Number(event.target.value)).join(", ")}`; });
+$("#save-position").addEventListener("click", () => { try { changeDraftPosition(state, Number($("#draft-position").value)); commit("Draft position updated; saved data preserved"); } catch (error) { toast(error.message); } });
+$("#draft-position").addEventListener("change", event => { $("#scheduled-picks").innerHTML=`<strong>Scheduled selections</strong><br>${picksForPosition(Number(event.target.value), state.league.teams, state.league.rounds).join(", ")}`; });
+let pendingTeamCount = null;
+$("#team-count").addEventListener("change", event => {
+  const teams = Number(event.target.value);
+  if (teams === state.league.teams) return;
+  if (state.picks.length) {
+    pendingTeamCount = teams;
+    $("#team-count-change").textContent = `${state.league.teams} to ${teams} teams`;
+    $("#team-count-dialog").showModal();
+  } else {
+    changeTeamCount(state, teams);
+    commit(`League updated to ${teams} teams`);
+  }
+});
+$("#cancel-team-count").addEventListener("click", () => { pendingTeamCount = null; $("#team-count-dialog").close(); render(); });
+$("#confirm-team-count").addEventListener("click", () => { changeTeamCount(state, pendingTeamCount); pendingTeamCount = null; $("#team-count-dialog").close(); commit("Team count updated; recorded picks and rosters cleared"); });
 $("#manual-mode").addEventListener("click", () => { $("#manual-fallback").scrollIntoView({ behavior: "smooth" }); $("#rankings-status").textContent = "Manual Mode selected — no protected rankings request was made."; });
 $("#rankings-form").addEventListener("submit", async event => {
   event.preventDefault(); const button=$("#load-rankings"), status=$("#rankings-status"); button.disabled=true; status.textContent="Loading — authenticating and validating rankings…";
