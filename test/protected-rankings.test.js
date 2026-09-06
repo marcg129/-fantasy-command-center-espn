@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createState } from "../src/draft-engine.js";
+import { hasCachedRankings, loadProtectedRankings } from "../src/protected-rankings.js";
+
+const csv="player_name,team,position,overall_rank\nLoaded Player,AAA,WR,1\n";
+const response=(ok,body="")=>({ok,status:ok?200:401,text:async()=>body});
+test("cached rankings prevent all protected fetches",async()=>{const state=createState({players:[{id:"1",name:"Cached",team:"AAA",position:"RB",overallRank:1}]});let calls=0;const result=await loadProtectedRankings({code:"unused",state,fetchImpl:async()=>{calls++;},persist:()=>{}});assert.equal(hasCachedRankings(state),true);assert.equal(result.status,"cached");assert.equal(calls,0);});
+test("successful load uses canonical parser and current persistence callback",async()=>{const state=createState();const urls=[];let saved;const result=await loadProtectedRankings({code:"ok",state,now:()=>"2026-09-06T12:00:00.000Z",fetchImpl:async url=>{urls.push(url);return url==="/api/session"?response(true):response(true,csv);},persist:value=>{saved=value;}});assert.deepEqual(urls,["/api/session","/api/rankings"]);assert.equal(result.count,1);assert.equal(state.players[0].name,"Loaded Player");assert.equal(state.importedAt,"2026-09-06T12:00:00.000Z");assert.equal(saved,state);});
+test("authentication, download, and validation failures preserve all canonical state",async()=>{for(const replies of [[response(false)],[response(true),response(false)],[response(true),response(true,"bad,csv\n1,2")]]){const original=createState({players:[],picks:[{pick:1,round:1,teamSlot:1,playerId:"historic"}],shortlist:["queued"],teamNames:["Custom"],league:{draftPosition:7}});const before=structuredClone(original);let index=0,persisted=false;await assert.rejects(loadProtectedRankings({code:"x",state:original,fetchImpl:async()=>replies[index++],persist:()=>{persisted=true;}}));assert.deepEqual(original,before);assert.equal(persisted,false);}});

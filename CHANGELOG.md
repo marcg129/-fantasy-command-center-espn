@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.2] - 2026-09-06
+
+### Added
+
+- Added same-origin beta authentication with signed eight-hour HttpOnly sessions and private no-store responses.
+- Added authenticated, bounded gzip rankings delivery with canonical CSV validation.
+- Added automatic canonical rankings loading, cached-board detection, status details, and a mobile-friendly Manual fallback.
+- Added a private local rankings encoder and Preview-first Vercel setup documentation.
+
+### Security
+
+- Kept access codes, session signing material, compressed rankings, request bodies, and cookies server-side and out of logs.
+- Added generic error responses, constant-time access-code comparison, signed expiration validation, and a 5 MiB decompression ceiling.
+
+### Preserved
+
+- Retained the v0.1.1 recommendation model, stable `fcc-espn-state` persistence key, v0.1.0 fallback, and manual CSV import without ESPN synchronization.
+
 ## [0.1.1] - 2026-09-06
 
 ### Fixed
