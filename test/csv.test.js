@@ -1,0 +1,5 @@
+import test from "node:test"; import assert from "node:assert/strict";
+import { parsePlayerCsv } from "../src/csv.js";
+test("malformed CSV rows report useful errors", () => { const result=parsePlayerCsv("player_name,team,position,overall_rank\nOne,AAA,RB,1\nBad,BBB,QB\nNope,CCC,XYZ,3"); assert.equal(result.players.length,1); assert.match(result.errors[0],/expected 4 columns/); assert.match(result.errors[1],/invalid position/); });
+test("missing optional fields become unavailable", () => { const result=parsePlayerCsv("player_name,team,position,overall_rank\nOne,AAA,RB,1"); assert.equal(result.errors.length,0); assert.equal(result.players[0].adp,null); assert.equal(result.players[0].notes,null); assert.equal(result.players[0].providerId,null); });
+test("provider IDs survive import and duplicates are blocked", () => { const result=parsePlayerCsv("player_name,team,position,overall_rank,provider_id\nOne,AAA,RB,1,provider-1\nOne,AAA,RB,2,provider-2"); assert.equal(result.players[0].id,"provider-1"); assert.match(result.errors[0],/duplicate player/); });
