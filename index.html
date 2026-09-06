@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07131f"><title>Draft Command Center · ESPN Manual Mode</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="eyebrow">GAME OF INCHES · ESPN</span><h1>Draft Command Center</h1></div>
+    <div class="mode"><span></span> Manual Mode <small>v0.1.1</small></div>
+  </header>
+  <main>
+    <section class="hero panel">
+      <div><span class="eyebrow">MEN OF STEELE</span><h2>Draft from the 4 spot.</h2><p>Sunday, September 6, 2026 · 8:00 PM ET · 10-team snake · 90 sec/pick</p></div>
+      <div class="pick-card"><small>CURRENT PICK</small><strong id="current-pick">1.01</strong><span id="clock-team">Team 1 on the clock</span></div>
+      <div class="pick-card accent"><small>YOUR NEXT PICK</small><strong id="next-pick">1.04</strong><span id="pick-spacing">3 picks away</span></div>
+    </section>
+    <nav class="tabs" aria-label="Workspace">
+      <button class="active" data-tab="draft">Draft room</button><button data-tab="queue">My queue <b id="queue-count">0</b></button><button data-tab="ledger">Pick log</button><button data-tab="settings">League & data</button>
+    </nav>
+
+    <section id="draft" class="tab-view active">
+      <div class="draft-grid">
+        <section class="panel players-panel">
+          <div class="section-head"><div><span class="eyebrow">AVAILABLE PLAYER POOL</span><h2>Make the pick</h2></div><span id="player-count" class="subtle">0 available</span></div>
+          <div class="filters"><input id="search" type="search" placeholder="Search player or team…" aria-label="Search players"><select id="position-filter" aria-label="Filter position"><option value="">All positions</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option><option value="DST">D/ST</option><option>K</option></select></div>
+          <div id="empty-import" class="empty"><strong>Your board starts with your rankings.</strong><p>Import a current CSV in League & data. No stale or demo rankings are bundled.</p><button data-open-settings class="primary">Import rankings</button></div>
+          <div id="player-list" class="player-list"></div>
+        </section>
+        <aside>
+          <section class="panel recommendations"><div class="section-head"><div><span class="eyebrow">DECISION SUPPORT</span><h2>Recommendations</h2></div><span class="score-help" title="A decision score, not projected points">ⓘ SCORE</span></div><p id="recommendation-note" class="subtle"></p><div id="recommendation-list"></div></section>
+          <section class="panel roster"><div class="section-head"><div><span class="eyebrow">MEN OF STEELE</span><h2>Roster build</h2></div><span id="roster-total">0 / 16</span></div><div id="roster-counts"></div></section>
+        </aside>
+      </div>
+    </section>
+
+    <section id="queue" class="tab-view"><section class="panel"><div class="section-head"><div><span class="eyebrow">PERSISTENT TARGETS</span><h2>My queue</h2></div></div><p class="subtle">Use the arrows to set priority. Drafted targets remain visible and flagged.</p><div id="queue-list"></div></section></section>
+    <section id="ledger" class="tab-view"><section class="panel"><div class="section-head"><div><span class="eyebrow">CANONICAL LEDGER</span><h2>Pick log</h2></div><button id="undo" class="secondary">Undo latest</button></div><div id="pick-log"></div></section></section>
+    <section id="settings" class="tab-view">
+      <div class="settings-grid">
+        <section class="panel"><span class="eyebrow">CONFIRMED SETUP</span><h2>League settings</h2><dl class="facts"><div><dt>League</dt><dd>Game of Inches</dd></div><div><dt>Format</dt><dd>Full PPR · Redraft</dd></div><div><dt>Draft</dt><dd>10 teams · Snake · 16 rounds</dd></div><div><dt>Lineup</dt><dd>QB · 2 RB · 2 WR · TE · FLEX · D/ST · K · 7 BN</dd></div></dl><label>Men of Steele draft position<select id="draft-position"></select></label><p id="scheduled-picks" class="callout"></p><button id="save-position" class="primary">Save position</button></section>
+        <section class="panel"><span class="eyebrow">PLAYER DATA</span><h2>Import rankings CSV</h2><p class="subtle">Required: name, team, position and overall rank. Missing optional values display as unavailable.</p><div class="button-row"><a href="data/player-rankings-template.csv" download class="secondary button">Download template</a><label class="primary button">Choose CSV<input id="csv-file" type="file" accept=".csv,text/csv" hidden></label></div><div id="import-report" aria-live="polite"></div></section>
+        <section class="panel"><span class="eyebrow">RECOVERY</span><h2>Backup & reset</h2><p class="subtle">JSON backups include settings, rankings, ledger and queue. They contain no ESPN credentials.</p><div class="button-row"><button id="export-backup" class="secondary">Export JSON</button><label class="secondary button">Import JSON<input id="backup-file" type="file" accept=".json,application/json" hidden></label><button id="reset" class="danger">Full reset</button></div></section>
+      </div>
+    </section>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <dialog id="confirm-dialog"><h2>Reset everything?</h2><p>This permanently clears rankings, picks, queue, and local settings from this browser.</p><div class="button-row"><button id="cancel-reset" class="secondary">Cancel</button><button id="confirm-reset" class="danger">Yes, full reset</button></div></dialog>
+  <dialog id="correct-dialog"><h2>Correct pick <span id="correct-number"></span></h2><label>Replacement player<select id="replacement-player"></select></label><div class="button-row"><button id="cancel-correct" class="secondary">Cancel</button><button id="confirm-correct" class="primary">Save correction</button></div></dialog>
+  <script type="module" src="src/app.js"></script>
+</body></html>
